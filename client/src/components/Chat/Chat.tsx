@@ -1,30 +1,38 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./Chat.css";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
+import { useSocket } from "../../contexts/socketContext";
 
 interface Message {
   id: number;
   text: string;
 }
 
+
 const Chat = () => {
-  const socket = useMemo(() => io("http://localhost:3001"), []);
-
-  useEffect(() => {
-    socket.on("message", (data) => {
-      setMessage((prev) => [...prev, { id: Date.now(), text: data }]);
-    });
-
-    return () => {
-      setMessage([]);
-      socket.disconnect();
-    };
-  }, []);
-
+  const socket = useSocket();
   const [messages, setMessage] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessage = (data: string) => {
+      setMessage((prev) => [...prev, { id: Date.now(), text: data }]);
+    };
+
+    socket.on("message", handleMessage);
+
+    return () => {
+      socket.off("message", handleMessage);
+      setInput("");
+    };
+  }, [socket]);
+
+
   const sendMessage = (event: any) => {
+    if (!socket) return;
+
     socket.emit("message", input);
     setInput("");
     event.preventDefault();
