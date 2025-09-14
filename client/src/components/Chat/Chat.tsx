@@ -1,22 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./Chat.css";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 
 interface Message {
   id: number;
   text: string;
 }
 
-const Chat = () => {
-  const socket = useMemo(() => io("http://localhost:3001"), []);
+const socket: Socket = io("http://localhost:3001"); // one global instance
 
+const Chat = () => {
   useEffect(() => {
+    const socket = io("http://localhost:3001");
+
     socket.on("message", (data) => {
       setMessage((prev) => [...prev, { id: Date.now(), text: data }]);
     });
 
     return () => {
-      setMessage([]);
+      setMessage([])
       socket.disconnect();
     };
   }, []);
