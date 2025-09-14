@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./Chat.css";
+import io from "socket.io-client";
 
 interface Message {
   id: number;
@@ -7,16 +8,27 @@ interface Message {
 }
 
 const Chat = () => {
+  const socket = useMemo(() => io("http://localhost:3001"), []);
+
+  useEffect(() => {
+    const socket = io("http://localhost:3001");
+
+    socket.on("message", (data) => {
+      setMessage((prev) => [...prev, { id: Date.now(), text: data }]);
+    });
+
+    return () => {
+      setMessage([]);
+      socket.disconnect();
+    };
+  }, []);
+
   const [messages, setMessage] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
 
-  const handleSend = (event: any) => {
-    setMessage((prevMessages) => [
-      ...prevMessages,
-      { id: Date.now(), text: input },
-    ]);
+  const sendMessage = (event: any) => {
+    socket.emit("message", input);
     setInput("");
-
     event.preventDefault();
   };
 
@@ -31,7 +43,7 @@ const Chat = () => {
           ))}
         </ul>
       </div>
-      <form onSubmit={handleSend} className="chat-input-area">
+      <form onSubmit={sendMessage} className="chat-input-area">
         <input
           type="text"
           value={input}
@@ -43,7 +55,6 @@ const Chat = () => {
           Send
         </button>
       </form>
-
     </div>
   );
 };
