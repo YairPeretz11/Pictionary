@@ -1,6 +1,5 @@
-import express from "express";
+import express, { type Request, type Response } from "express";
 import cors from "cors";
-import type { Request, Response } from "express";
 import http from "http";
 import { Server } from "socket.io";
 
@@ -15,31 +14,43 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
-
 app.use(cors());
 
+let currentDrawerId: string | null = null;
+
 io.on("connection", (socket) => {
-console.log("User connected", socket.id);
-
-
-  socket.on("message", (data) => {
+  socket.on("message", (data: string) => {
     io.emit("message", data);
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  socket.on("drawing", (data: string) => {
+    if (typeof data === "string" && data.length > 0) {
+      socket.broadcast.emit("drawing", data);
+    }
   });
-});
 
-// Define a simple route
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello from Express with TypeScript!");
-});
+  socket.on("drawing:clear", () => {
+    socket.broadcast.emit("drawing:clear");
+  });
 
-// Another route with a parameter
-app.get("/greet/:name", (req: Request, res: Response) => {
-  const name = req.params.name;
-  res.json({ message: `Greetings, ${name}!` });
+  socket.on("drawing:charge", (id: string) => {
+    currentDrawerId = id;
+    io.emit("drawing:charge", currentDrawerId);
+  });
+
+  // Respond with who is in charge
+  socket.on("drawing:whoInCharge", () => {
+    if (currentDrawerId) {
+      socket.emit("drawing:whoInCharge", currentDrawerId);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.id === currentDrawerId) {
+      currentDrawerId = null;
+      io.emit("drawing:charge", null);
+    }
+  });
 });
 
 // Start the server
