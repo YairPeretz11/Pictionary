@@ -8,16 +8,18 @@ interface Message {
   text: string;
 }
 
-
 const Chat = () => {
   const socket = useSocket();
   const [messages, setMessage] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
 
+const Chat = () => {
   useEffect(() => {
     if (!socket) return;
 
     const handleMessage = (data: string) => {
+
+    socket.on("message", (data) => {
       setMessage((prev) => [...prev, { id: Date.now(), text: data }]);
     };
 
